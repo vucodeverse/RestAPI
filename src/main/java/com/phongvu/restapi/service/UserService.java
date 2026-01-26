@@ -1,29 +1,36 @@
 package com.phongvu.restapi.service;
 
+import com.phongvu.restapi.constants.ApiMessage;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
+import com.phongvu.restapi.dto.response.UserResponse;
+import com.phongvu.restapi.mapper.UserMapper;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.repository.UserRepo;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.phongvu.restapi.utils.exception.AppException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
-    @Autowired
-    private UserRepo userRepo;
+
+    private final UserRepo userRepo;
+    private final UserMapper userMapper;
 
     public User createRequestUser(UserCreationRequest request) {
-        User user = new User();
 
         if (userRepo.existsByUsername(request.getUsername()))
-            throw new RuntimeException("UserName is exited!!");
-        user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword());
-        user.setFullName(request.getFullName());
-        user.setDob(request.getDob());
+            throw new AppException(ApiMessage.USER_EXITED);
+
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+
+        User user = userMapper.toUser(request);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         return userRepo.save(user);
     }
@@ -32,36 +39,26 @@ public class UserService {
         return userRepo.findAll();
     }
 
-    public Optional<User> getUserById(String id) {
-        return userRepo.findById(id);
+    public UserResponse getUserById(String id) {
+        return userMapper.toUserResponse(userRepo.findById(id)
+                .orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND)));
     }
 
-    public Optional<User> updateUser(String id, UserUpdateRequest request) {
-        Optional<User> optionalUser = getUserById(id);
+    public UserResponse updateUser(String id, UserUpdateRequest request) {
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND));
 
-        if (optionalUser.isEmpty()) {
-            return Optional.empty();
-        }
+        userMapper.updateUser(user, request);
 
-        User user = optionalUser.get();
-        user.setPassword(request.getPassword());
-        user.setFullName(request.getFullName());
-        user.setDob(request.getDob());
-
-        userRepo.save(user);
-
-        return Optional.of(user);
+        return userMapper.toUserResponse(userRepo.save(user));
     }
 
     public void deleteUser(String id) {
 
-        if (getUserById(id).isEmpty()) {
-            throw new RuntimeException("User not found");
+        if (getUserById(id) == null) {
+            throw new AppException(ApiMessage.USER_NOT_FOUND);
         }
         userRepo.deleteById(id);
 
-//        User user = userRepo.findById(id)
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//        userRepo.delete(user);
     }
 }
