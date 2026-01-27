@@ -3,7 +3,7 @@ package com.phongvu.restapi.controller;
 import com.phongvu.restapi.dto.request.ApiResponse;
 import com.phongvu.restapi.dto.request.AuthenticationRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
-import com.phongvu.restapi.service.UserService;
+import com.phongvu.restapi.service.AuthenticationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,14 +16,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AuthenticationController {
 
-    private final UserService userService;
+    private final AuthenticationService authenticationService;
 
+    /**
+     * Authenticates a user and returns a JWT token.
+     *
+     * <p>This endpoint validates the provided username and password,
+     * and returns a JWT token if authentication is successful.</p>
+     *
+     * @param request the authentication request containing username and password
+     * @return {@link ResponseEntity} containing {@link ApiResponse} with authentication result
+     */
     @PostMapping
     ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody AuthenticationRequest request) {
-        boolean result = userService.authenticate(request);
-        AuthenticationResponse authenticationResponse = new AuthenticationResponse(result);
+        var authenticationResult = authenticationService.authenticate(request);
+
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
-        response.setResult(authenticationResponse);
+        response.setResult(authenticationResult);
+
         return ResponseEntity.ok(response);
     }
 }
