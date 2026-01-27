@@ -2,6 +2,7 @@ package com.phongvu.restapi.constants;
 
 public enum ApiMessage {
     USER_EXITED(400, "UserName is exited!!"),
+    USER_NOT_EXITED(400, "UserName is not exited!!"),
     USER_NOT_FOUND(400, "User not found!!"),
     USER_CREATED(201, "Create user successfully"),
     USER_UPDATED(200, "Update user successfully"),

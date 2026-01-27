@@ -1,6 +1,7 @@
 package com.phongvu.restapi.service;
 
 import com.phongvu.restapi.constants.ApiMessage;
+import com.phongvu.restapi.dto.request.AuthenticationRequest;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
 import com.phongvu.restapi.dto.response.UserResponse;
@@ -21,6 +22,15 @@ public class UserService {
 
     private final UserRepo userRepo;
     private final UserMapper userMapper;
+
+
+    public boolean authenticate(AuthenticationRequest request) {
+        var user = userRepo.findUserByUsername(request.getUsername())
+                .orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND));
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
+        return passwordEncoder.matches(request.getPassword(), user.getPassword());
+    }
+
 
     public User createRequestUser(UserCreationRequest request) {
 
