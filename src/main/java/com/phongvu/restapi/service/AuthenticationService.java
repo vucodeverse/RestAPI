@@ -2,10 +2,14 @@ package com.phongvu.restapi.service;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.phongvu.restapi.constants.ApiMessage;
 import com.phongvu.restapi.dto.request.AuthenticationRequest;
+import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
+import com.phongvu.restapi.dto.response.IntrospectResponse;
 import com.phongvu.restapi.repository.UserRepo;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -67,6 +72,7 @@ public class AuthenticationService {
                 .build();
     }
 
+
     /**
      * Generates a signed JWT token using HMAC SHA-256 algorithm.
      *
@@ -91,10 +97,10 @@ public class AuthenticationService {
 
             // Claims (payload) of JWT
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                    .subject(username)      // sub: định danh user
-                    .issuer("jwt.com")      // iss: bên phát hành token
-                    .issueTime(new Date())  // iat: thời điểm tạo token
-                    .expirationTime(        // exp: thời điểm hết hạn
+                    .subject(username)      // sub: identifier user
+                    .issuer("jwt.com")      // iss: issuing party token
+                    .issueTime(new Date())  // iat: creation time token
+                    .expirationTime(        // exp: expiration time
                             Date.from(Instant.now().plus(5, ChronoUnit.MINUTES))
                     )
                     .claim("customClaim", "Custom")
@@ -121,4 +127,59 @@ public class AuthenticationService {
     }
 
 
+    /**
+     * Validates a JWT token by verifying its signature and expiration time.
+     *
+     * @param request the introspection request containing JWT token
+     * @return {@link IntrospectResponse} indicating whether the token is valid
+     */
+    public IntrospectResponse introspect(IntrospectRequest request) {
+
+        try {
+            // Extract JWT token from request
+            String token = request.getToken();
+
+            // Reject immediately if token is missing or empty
+            if (token == null || token.isBlank()) {
+                return IntrospectResponse.builder()
+                        .valid(false)
+                        .build();
+            }
+
+            // Parse the serialized JWT string into a SignedJWT object
+            SignedJWT signedJWT = SignedJWT.parse(token);
+
+            // Ensure algorithm consistency with token generation
+            if (!JWSAlgorithm.HS256.equals(
+                    signedJWT.getHeader().getAlgorithm())) {
+                return IntrospectResponse.builder()
+                        .valid(false)
+                        .build();
+            }
+
+            // Create verifier using shared secret key (HMAC)
+            JWSVerifier jwsVerifier = new MACVerifier(secretKey.getBytes(StandardCharsets.UTF_8));
+
+            // Extract expiration time from token claims
+            Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+
+            // Token is considered valid only if it has not expired
+            boolean notExpired = expirationTime != null
+                    && expirationTime.after(new Date());
+
+            // Verify JWT signature to ensure token integrity
+            boolean signatureValid = signedJWT.verify(jwsVerifier);
+
+            // Token is valid only when signature is correct and token is not expired
+            return IntrospectResponse.builder()
+                    .valid(signatureValid && notExpired)
+                    .build();
+        } catch (JOSEException | ParseException e) {
+            // Any parsing or verification error means the token is invalid
+            log.warn("Invalid JWT token", e);
+            return IntrospectResponse.builder()
+                    .valid(false)
+                    .build();
+        }
+    }
 }
