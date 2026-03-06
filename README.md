@@ -1,5 +1,4 @@
 # User Management & Authentication REST API
-
 ## 📋 Giới thiệu
 Dự án này là một hệ thống **RESTful API** được xây dựng trên nền tảng **Java Spring Boot**, cung cấp các chức năng quản lý người dùng (User Management) và xác thực, phân quyền bảo mật (Authentication & Authorization) sử dụng JSON Web Token (JWT).
 
