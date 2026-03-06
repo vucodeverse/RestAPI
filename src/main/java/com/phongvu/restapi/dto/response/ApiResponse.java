@@ -1,4 +1,4 @@
-package com.phongvu.restapi.dto.request;
+package com.phongvu.restapi.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
@@ -6,7 +6,7 @@ import lombok.*;
 @Getter
 @Setter
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class ApiResponse <T>{
+public class ApiResponse<T> {
     private int code;
     private String message;
     private T result;

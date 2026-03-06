@@ -5,6 +5,8 @@ import jakarta.persistence.GeneratedValue;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Set;
 
 @Entity
 @Table(name = "tbl_users")
@@ -20,4 +22,5 @@ public class User {
     private String password;
     private String fullName;
     private LocalDate dob;
+    Set<String> roles;
 }

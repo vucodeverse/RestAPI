@@ -10,6 +10,7 @@ import com.phongvu.restapi.dto.request.AuthenticationRequest;
 import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
+import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.repository.UserRepo;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +18,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.StringJoiner;
 
 @Slf4j // Automatically create a logger
 @Service // Mark this as a Service layer in Spring
@@ -62,7 +65,7 @@ public class AuthenticationService {
         }
 
         //Create JWT if authentication success
-        var token = genToken(request.getUsername());
+        var token = genToken(user);
 
         //Return response authentication success
         return AuthenticationResponse
@@ -70,6 +73,14 @@ public class AuthenticationService {
                 .token(token)
                 .isAuthenticated(true)
                 .build();
+    }
+
+    private String buildScope(User user) {
+        StringJoiner stringJoiner = new StringJoiner(" ");
+        if (!CollectionUtils.isEmpty(user.getRoles())) {
+            user.getRoles().forEach(stringJoiner::add);
+        }
+        return stringJoiner.toString();
     }
 
 
@@ -84,26 +95,25 @@ public class AuthenticationService {
      *   <li>Expiration time (5 minutes)</li>
      * </ul>
      *
-     * @param username the username used as the subject of the token
+     * @param user the user object used as the subject of the token
      * @return a serialized JWT token string
      *
      * @throws AppException if token generation fails
      */
-    private String genToken(String  username) {
+    private String genToken(User user) {
         try {
             // Header of JWT
-            // HS256 = HMAC SHA-256 (symmetric key)
             JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
 
             // Claims (payload) of JWT
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                    .subject(username)      // sub: identifier user
-                    .issuer("jwt.com")      // iss: issuing party token
-                    .issueTime(new Date())  // iat: creation time token
-                    .expirationTime(        // exp: expiration time
+                    .subject(user.getUsername())        // sub: identifier user
+                    .issuer("jwt.com")                  // iss: issuing party token
+                    .issueTime(new Date())              // iat: creation time token
+                    .expirationTime(                    // exp: expiration time
                             Date.from(Instant.now().plus(5, ChronoUnit.MINUTES))
                     )
-                    .claim("customClaim", "Custom")
+                    .claim("scope", buildScope(user))
                     .build();
 
             // Convert claims -> payload JSON

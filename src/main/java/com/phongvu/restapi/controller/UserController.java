@@ -1,11 +1,10 @@
 package com.phongvu.restapi.controller;
 
 import com.phongvu.restapi.constants.ApiMessage;
-import com.phongvu.restapi.dto.request.ApiResponse;
+import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
 import com.phongvu.restapi.dto.response.UserResponse;
-import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +21,10 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    ResponseEntity<ApiResponse<User>> createUser(
+    ResponseEntity<ApiResponse<UserResponse>> createUser(
             @RequestBody @Valid UserCreationRequest request) {
 
-        ApiResponse<User> response = new ApiResponse<>();
+        ApiResponse<UserResponse> response = new ApiResponse<>();
         response.setCode(ApiMessage.USER_CREATED.getCode());
         response.setMessage(ApiMessage.USER_CREATED.getMsg());
         response.setResult(userService.createRequestUser(request));
@@ -34,9 +33,9 @@ public class UserController {
     }
 
     @GetMapping
-    ResponseEntity<ApiResponse<List<User>>> getAllUser() {
+    ResponseEntity<ApiResponse<List<UserResponse>>> getAllUser() {
 
-        ApiResponse<List<User>> response = new ApiResponse<>();
+        ApiResponse<List<UserResponse>> response = new ApiResponse<>();
         response.setCode(ApiMessage.GET_ALL_USER.getCode());
         response.setMessage(ApiMessage.GET_ALL_USER.getMsg());
         response.setResult(userService.getAllUser());
@@ -77,7 +76,7 @@ public class UserController {
         response.setCode(204);
         response.setMessage("Delete successfully");
 
-        //return ResponseEntity.status(204).body(response);
+        // return ResponseEntity.status(204).body(response);
         return ResponseEntity.ok(response);
     }
 

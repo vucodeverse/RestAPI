@@ -1,7 +1,6 @@
 package com.phongvu.restapi.controller;
 
-import com.nimbusds.jose.JOSEException;
-import com.phongvu.restapi.dto.request.ApiResponse;
+import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.AuthenticationRequest;
 import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
@@ -13,8 +12,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.text.ParseException;
 
 @RestController
 @RequestMapping("/auth")

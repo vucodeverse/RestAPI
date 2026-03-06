@@ -1,6 +1,6 @@
 package com.phongvu.restapi.utils.exception;
 
-import com.phongvu.restapi.dto.request.ApiResponse;
+import com.phongvu.restapi.dto.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
