@@ -54,6 +54,16 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/profile")
+    ResponseEntity<ApiResponse<UserResponse>> getProfile() {
+        ApiResponse<UserResponse> response = new ApiResponse<>();
+        response.setCode(200);
+        response.setMessage("Get profile successfully");
+        response.setResult(userService.getProfile());
+
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{id}")
     ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @RequestBody @Valid UserUpdateRequest request,

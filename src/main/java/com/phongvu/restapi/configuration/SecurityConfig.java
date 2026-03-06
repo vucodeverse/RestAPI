@@ -5,8 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +22,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 @Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final String[] ENDPOINT = {"/users", "/auth", "/auth/introspect"};
@@ -41,7 +44,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize ->
                         authorize.requestMatchers(HttpMethod.POST, ENDPOINT).permitAll()
                                 //.requestMatchers(HttpMethod.GET, "/users").hasAuthority("ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.GET, "/users").hasRole(Role.ADMIN.name())
+                                //.requestMatchers(HttpMethod.GET, "/users").hasRole(Role.ADMIN.name())
                                 .anyRequest()
                                 .authenticated()
                 )

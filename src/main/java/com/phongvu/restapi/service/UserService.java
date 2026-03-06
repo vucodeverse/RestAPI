@@ -11,8 +11,9 @@ import com.phongvu.restapi.repository.UserRepo;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -53,10 +54,12 @@ public class UserService {
      *
      * @return
      */
+    @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getAllUser() {
 
         var authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        assert authentication != null;
         log.info("Username: {}", authentication.getName());
         authentication.getAuthorities().forEach(grantedAuthority
                 -> log.info(grantedAuthority.getAuthority()));
@@ -72,9 +75,27 @@ public class UserService {
      * @param id
      * @return
      */
+    @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse getUserById(String id) {
         return userMapper.toUserResponse(userRepo.findById(id)
                 .orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND)));
+    }
+
+
+    /**
+     *
+     *
+     * @return
+     */
+    public UserResponse getProfile() {
+        var context = SecurityContextHolder.getContext();
+        String name = context.getAuthentication().getName();
+
+        User user = userRepo.findUserByUsername(name).
+                orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND));
+
+        return userMapper.toUserResponse(user);
+
     }
 
     /**
@@ -83,6 +104,7 @@ public class UserService {
      * @param request
      * @return
      */
+    @PreAuthorize("hasRole('ADMIN')")
     public UserResponse updateUser(String id, UserUpdateRequest request) {
         User user = userRepo.findById(id)
                 .orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND));
