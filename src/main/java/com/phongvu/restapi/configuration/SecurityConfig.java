@@ -26,7 +26,7 @@ import javax.crypto.spec.SecretKeySpec;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final String[] ENDPOINT = {"/users", "/auth", "/auth/introspect"};
+    private static final String[] PUBLIC_ENDPOINTS = { "/users", "/auth", "/auth/introspect" };
 
     // Get the secret key from application.properties
     @Value("${jwt.secret}")
@@ -41,17 +41,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
         httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorize ->
-                        authorize.requestMatchers(HttpMethod.POST, ENDPOINT).permitAll()
-                                //.requestMatchers(HttpMethod.GET, "/users").hasAuthority("ROLE_ADMIN")
-                                //.requestMatchers(HttpMethod.GET, "/users").hasRole(Role.ADMIN.name())
+                .authorizeHttpRequests(
+                        authorize -> authorize.requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
+                                // .requestMatchers(HttpMethod.GET, "/users").hasAuthority("ROLE_ADMIN")
+                                // .requestMatchers(HttpMethod.GET, "/users").hasRole(Role.ADMIN.name())
                                 .anyRequest()
-                                .authenticated()
-                )
+                                .authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder())
-                                .jwtAuthenticationConverter(jwtAuthenticationConverter()))
-                );
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())));
         return httpSecurity.build();
     }
 
@@ -70,8 +68,7 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder() {
         SecretKey key = new SecretKeySpec(
-                secretKey.getBytes(), "HS256"
-        );
+                secretKey.getBytes(), "HS256");
 
         return NimbusJwtDecoder
                 .withSecretKey(key)
