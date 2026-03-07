@@ -5,16 +5,19 @@ import lombok.*;
 
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
-    private int code;
+    private Integer code;
     private String message;
     private T result;
 
-    public static <T> ApiResponse<T> success(T result) {
+    public static <T> ApiResponse<T> success(int code, String message, T result) {
         ApiResponse<T> response = new ApiResponse<>();
-        response.setCode(200);
-        response.setMessage("Success");
+        response.setCode(code);
+        response.setMessage(message);
         response.setResult(result);
         return response;
     }
@@ -25,5 +28,4 @@ public class ApiResponse<T> {
         response.setMessage(message);
         return response;
     }
-
 }

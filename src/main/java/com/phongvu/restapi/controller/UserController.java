@@ -1,6 +1,6 @@
 package com.phongvu.restapi.controller;
 
-import com.phongvu.restapi.constants.ApiMessage;
+import com.phongvu.restapi.constants.SuccessCode;
 import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
@@ -23,71 +23,51 @@ public class UserController {
     @PostMapping
     ResponseEntity<ApiResponse<UserResponse>> createUser(
             @RequestBody @Valid UserCreationRequest request) {
-
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setCode(ApiMessage.USER_CREATED.getCode());
-        response.setMessage(ApiMessage.USER_CREATED.getMsg());
-        response.setResult(userService.createRequestUser(request));
-
-        return ResponseEntity.status(201).body(response);
+        return ResponseEntity
+                .status(SuccessCode.USER_CREATED.getHttpStatus())
+                .body(ApiResponse.success(
+                        SuccessCode.USER_CREATED.getCode(),
+                        SuccessCode.USER_CREATED.getMsg(),
+                        userService.createUser(request)));
     }
 
     @GetMapping
     ResponseEntity<ApiResponse<List<UserResponse>>> getAllUser() {
-
-        ApiResponse<List<UserResponse>> response = new ApiResponse<>();
-        response.setCode(ApiMessage.GET_ALL_USER.getCode());
-        response.setMessage(ApiMessage.GET_ALL_USER.getMsg());
-        response.setResult(userService.getAllUser());
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessCode.GET_ALL_USER.getCode(),
+                SuccessCode.GET_ALL_USER.getMsg(),
+                userService.getAllUser()));
     }
 
     @GetMapping("/{id}")
     ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable String id) {
-
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setCode(200);
-        response.setMessage("Get user successfully");
-        response.setResult(userService.getUserById(id));
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessCode.GET_USER_BY_ID.getCode(),
+                SuccessCode.GET_USER_BY_ID.getMsg(),
+                userService.getUserById(id)));
     }
 
     @GetMapping("/profile")
     ResponseEntity<ApiResponse<UserResponse>> getProfile() {
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setCode(200);
-        response.setMessage("Get profile successfully");
-        response.setResult(userService.getProfile());
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessCode.GET_PROFILE.getCode(),
+                SuccessCode.GET_PROFILE.getMsg(),
+                userService.getProfile()));
     }
 
     @PutMapping("/{id}")
     ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @RequestBody @Valid UserUpdateRequest request,
             @PathVariable String id) {
-
-        ApiResponse<UserResponse> response = new ApiResponse<>();
-        response.setCode(200);
-        response.setMessage("Update user successfully");
-        response.setResult(userService.updateUser(id, request));
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessCode.USER_UPDATED.getCode(),
+                SuccessCode.USER_UPDATED.getMsg(),
+                userService.updateUser(id, request)));
     }
 
     @DeleteMapping("/{id}")
-    ResponseEntity<ApiResponse<Void>> removeUser(@PathVariable String id) {
-
+    ResponseEntity<Void> removeUser(@PathVariable String id) {
         userService.deleteUser(id);
-
-        ApiResponse<Void> response = new ApiResponse<>();
-        response.setCode(204);
-        response.setMessage("Delete successfully");
-
-        // return ResponseEntity.status(204).body(response);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.noContent().build();
     }
-
 }

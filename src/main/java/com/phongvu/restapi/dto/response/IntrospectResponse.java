@@ -1,13 +1,12 @@
 package com.phongvu.restapi.dto.response;
 
 import lombok.*;
-import lombok.experimental.FieldDefaults;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
+@Getter
+@Setter
 @Builder
-@FieldDefaults(level = AccessLevel.PRIVATE)
 public class IntrospectResponse {
-    boolean valid;
+    private boolean valid;
 }

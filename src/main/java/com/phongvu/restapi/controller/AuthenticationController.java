@@ -6,6 +6,8 @@ import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
 import com.phongvu.restapi.service.AuthenticationService;
+import com.phongvu.restapi.service.AuthenticationServiceImpl;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,7 +32,7 @@ public class AuthenticationController {
      * @return {@link ResponseEntity} containing {@link ApiResponse} with authentication result
      */
     @PostMapping
-    ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody AuthenticationRequest request) {
+    ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody @Valid AuthenticationRequest request) {
         var authenticationResult = authenticationService.authenticate(request);
 
         ApiResponse<AuthenticationResponse> response = new ApiResponse<>();
@@ -44,7 +46,7 @@ public class AuthenticationController {
      * Introspect JWT token to check its validity.
      *
      * <p>This endpoint receives a JWT token from client,
-     * delegates validation logic to {@link AuthenticationService},
+     * delegates validation logic to {@link AuthenticationServiceImpl},
      * and returns whether the token is valid or not.</p>
      *
      * @param request the introspection request containing JWT token

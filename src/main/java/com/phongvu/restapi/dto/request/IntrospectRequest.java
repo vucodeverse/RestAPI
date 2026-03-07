@@ -1,13 +1,13 @@
 package com.phongvu.restapi.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
-import lombok.experimental.FieldDefaults;
 
 @NoArgsConstructor
 @AllArgsConstructor
-@Data
-@Builder
-@FieldDefaults(level = AccessLevel.PRIVATE)
+@Getter
+@Setter
 public class IntrospectRequest {
-    String token;
+    @NotBlank(message = "Token is required")
+    private String token;
 }

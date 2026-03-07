@@ -1,17 +1,16 @@
 package com.phongvu.restapi.utils.exception;
 
-
-import com.phongvu.restapi.constants.ApiMessage;
+import com.phongvu.restapi.constants.ErrorCode;
 
 public class AppException extends RuntimeException {
-    private final ApiMessage errorCode;
+    private final ErrorCode errorCode;
 
-    public AppException(ApiMessage errorCode) {
+    public AppException(ErrorCode errorCode) {
         super(errorCode.getMsg());
         this.errorCode = errorCode;
     }
 
-    public ApiMessage getErrorCode() {
+    public ErrorCode getErrorCode() {
         return errorCode;
     }
 }
