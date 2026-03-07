@@ -1,6 +1,6 @@
 package com.phongvu.restapi.service;
 
-import com.phongvu.restapi.constants.ApiMessage;
+import com.phongvu.restapi.constants.ErrorCode;
 import com.phongvu.restapi.constants.Role;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,53 +21,55 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserServiceImpl implements UserService{
+public class UserServiceImpl implements UserService {
 
     private final UserRepo userRepo;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
     /**
+     * Creates a new user with encoded password and default USER role.
      *
-     * @param request
-     * @return
+     * @param request the user creation request
+     * @return the created user response
+     * @throws AppException if username already exists
      */
     @Transactional
     public UserResponse createUser(UserCreationRequest request) {
-
-        if (userRepo.existsByUsername(request.getUsername()))
-            throw new AppException(ApiMessage.USER_EXISTED);
+        if (userRepo.existsByUsername(request.getUsername())) {
+            throw new AppException(ErrorCode.USER_EXISTED);
+        }
 
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         HashSet<String> roles = new HashSet<>();
         roles.add(Role.USER.name());
-
         user.setRoles(roles);
 
         return userMapper.toUserResponse(userRepo.save(user));
     }
 
     /**
+     * Retrieves all users. Requires ADMIN role.
      *
-     * @return
+     * @return list of all user responses
      */
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getAllUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
 
-        assert authentication != null;
         log.info("Username: {}", authentication.getName());
-        authentication.getAuthorities().forEach(grantedAuthority
-                -> log.info(grantedAuthority.getAuthority()));
-
+        authentication.getAuthorities()
+                .forEach(authority -> log.info(authority.getAuthority()));
 
         return userRepo.findAll().stream()
                 .map(userMapper::toUserResponse)
@@ -74,44 +77,52 @@ public class UserServiceImpl implements UserService{
     }
 
     /**
+     * Retrieves a user by ID. Only the user themselves can view (PostAuthorize).
      *
-     * @param id
-     * @return
+     * @param id the user ID
+     * @return the user response
+     * @throws AppException if user not found
      */
     @PostAuthorize("returnObject.username == authentication.name")
     public UserResponse getUserById(String id) {
         return userMapper.toUserResponse(userRepo.findById(id)
-                .orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND)));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));
     }
 
-
     /**
+     * Retrieves the profile of the currently authenticated user.
      *
-     *
-     * @return
+     * @return the user response for the current user
+     * @throws AppException if user not found or not authenticated
      */
     public UserResponse getProfile() {
-        var context = SecurityContextHolder.getContext();
-        String name = Objects.requireNonNull(context.getAuthentication()).getName();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        User user = userRepo.findUserByUsername(name).
-                orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND));
+        if (authentication == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        String name = authentication.getName();
+
+        User user = userRepo.findUserByUsername(name)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         return userMapper.toUserResponse(user);
-
     }
 
     /**
+     * Updates a user by ID. Requires ADMIN role. Password is encoded if provided.
      *
-     * @param id
-     * @param request
-     * @return
+     * @param id      the user ID
+     * @param request the update request
+     * @return the updated user response
+     * @throws AppException if user not found
      */
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse updateUser(String id, UserUpdateRequest request) {
         User user = userRepo.findById(id)
-                .orElseThrow(() -> new AppException(ApiMessage.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         userMapper.updateUser(user, request);
 
@@ -123,18 +134,17 @@ public class UserServiceImpl implements UserService{
     }
 
     /**
+     * Deletes a user by ID. Requires ADMIN role.
      *
-     * @param id
+     * @param id the user ID
+     * @throws AppException if user not found
      */
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteUser(String id) {
-
         if (!userRepo.existsById(id)) {
-            throw new AppException(ApiMessage.USER_NOT_FOUND);
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
         }
-
         userRepo.deleteById(id);
-
     }
 }
