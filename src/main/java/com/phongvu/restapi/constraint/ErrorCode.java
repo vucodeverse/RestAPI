@@ -1,4 +1,4 @@
-package com.phongvu.restapi.constants;
+package com.phongvu.restapi.constraint;
 
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

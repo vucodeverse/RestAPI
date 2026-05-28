@@ -1,6 +1,6 @@
 package com.phongvu.restapi.controller;
 
-import com.phongvu.restapi.constants.SuccessCode;
+import com.phongvu.restapi.constraint.SuccessCode;
 import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
-public class UserController {
+public class  UserController {
 
     private final UserService userService;
 

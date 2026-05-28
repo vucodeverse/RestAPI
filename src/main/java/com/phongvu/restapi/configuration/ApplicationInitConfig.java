@@ -1,6 +1,6 @@
 package com.phongvu.restapi.configuration;
 
-import com.phongvu.restapi.constants.Role;
+import com.phongvu.restapi.constraint.Role;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.repository.UserRepo;
 import lombok.RequiredArgsConstructor;

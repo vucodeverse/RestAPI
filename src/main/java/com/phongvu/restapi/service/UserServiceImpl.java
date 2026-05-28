@@ -1,7 +1,7 @@
 package com.phongvu.restapi.service;
 
-import com.phongvu.restapi.constants.ErrorCode;
-import com.phongvu.restapi.constants.Role;
+import com.phongvu.restapi.constraint.ErrorCode;
+import com.phongvu.restapi.constraint.Role;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
 import com.phongvu.restapi.dto.response.UserResponse;

@@ -1,6 +1,6 @@
 package com.phongvu.restapi.utils.exception;
 
-import com.phongvu.restapi.constants.ErrorCode;
+import com.phongvu.restapi.constraint.ErrorCode;
 import com.phongvu.restapi.dto.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;

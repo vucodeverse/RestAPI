@@ -1,6 +1,6 @@
 package com.phongvu.restapi.utils.exception;
 
-import com.phongvu.restapi.constants.ErrorCode;
+import com.phongvu.restapi.constraint.ErrorCode;
 
 public class AppException extends RuntimeException {
     private final ErrorCode errorCode;

@@ -5,7 +5,7 @@ import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import com.phongvu.restapi.constants.ErrorCode;
+import com.phongvu.restapi.constraint.ErrorCode;
 import com.phongvu.restapi.dto.request.AuthenticationRequest;
 import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;

@@ -1,4 +1,4 @@
-package com.phongvu.restapi.constants;
+package com.phongvu.restapi.constraint;
 
 public enum Role {
     ADMIN,
