@@ -7,6 +7,7 @@ import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
 import com.phongvu.restapi.service.AuthenticationService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,8 +15,9 @@ import org.springframework.web.bind.annotation.*;
 
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("api/identity")
 @RequiredArgsConstructor
+@Tag(name = "Authentication")
 public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
@@ -27,7 +29,7 @@ public class AuthenticationController {
      * @return {@link ResponseEntity} containing {@link ApiResponse} with
      *         authentication result
      */
-    @PostMapping
+    @PostMapping("authenticate")
     ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(
             @RequestBody @Valid AuthenticationRequest request) {
         return ResponseEntity.ok(ApiResponse.success(

@@ -25,7 +25,8 @@ import javax.crypto.spec.SecretKeySpec;
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private static final String[] PUBLIC_ENDPOINTS = { "/users", "/auth", "/auth/introspect" };
+    private static final String[] PUBLIC_ENDPOINTS = {"/users", "/auth", "/auth/introspect"};
+    private static final String[] SWAGGER_ENDPOINTS = {"/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html"};
 
     // Get the secret key from application.properties
     @Value("${jwt.secret}")
@@ -41,7 +42,9 @@ public class SecurityConfig {
         httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
-                        authorize -> authorize.requestMatchers(HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
+                        authorize -> authorize.requestMatchers(
+                                HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
+                                .requestMatchers(SWAGGER_ENDPOINTS).permitAll()
                                 // .requestMatchers(HttpMethod.GET, "/users").hasAuthority("ROLE_ADMIN")
                                 // .requestMatchers(HttpMethod.GET, "/users").hasRole(Role.ADMIN.name())
                                 .anyRequest()
@@ -75,5 +78,7 @@ public class SecurityConfig {
                 .withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-    };
+    }
+
+    ;
 }

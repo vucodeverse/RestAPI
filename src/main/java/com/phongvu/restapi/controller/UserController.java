@@ -6,6 +6,7 @@ import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
 import com.phongvu.restapi.dto.response.UserResponse;
 import com.phongvu.restapi.service.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,15 +15,15 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("api/users")
 @RequiredArgsConstructor
+@Tag(name = "User")
 public class  UserController {
 
     private final UserService userService;
 
-    @PostMapping
-    ResponseEntity<ApiResponse<UserResponse>> createUser(
-            @RequestBody @Valid UserCreationRequest request) {
+    @PostMapping("create")
+    ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody @Valid UserCreationRequest request) {
         return ResponseEntity
                 .status(SuccessCode.USER_CREATED.getHttpStatus())
                 .body(ApiResponse.success(
@@ -31,7 +32,7 @@ public class  UserController {
                         userService.createUser(request)));
     }
 
-    @GetMapping
+    @GetMapping("getAll")
     ResponseEntity<ApiResponse<List<UserResponse>>> getAllUser() {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.GET_ALL_USER.getCode(),
@@ -39,7 +40,7 @@ public class  UserController {
                 userService.getAllUser()));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/getDetail/{id}")
     ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.GET_USER_BY_ID.getCode(),
@@ -55,7 +56,7 @@ public class  UserController {
                 userService.getProfile()));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("update/{id}")
     ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @RequestBody @Valid UserUpdateRequest request,
             @PathVariable String id) {
@@ -65,8 +66,8 @@ public class  UserController {
                 userService.updateUser(id, request)));
     }
 
-    @DeleteMapping("/{id}")
-    ResponseEntity<Void> removeUser(@PathVariable String id) {
+    @DeleteMapping("delete/{id}")
+    ResponseEntity<Void> deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
