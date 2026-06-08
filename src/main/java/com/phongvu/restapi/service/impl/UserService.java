@@ -1,4 +1,4 @@
-package com.phongvu.restapi.service;
+package com.phongvu.restapi.service.impl;
 
 import com.phongvu.restapi.constraint.ErrorCode;
 import com.phongvu.restapi.constraint.Role;
@@ -8,9 +8,12 @@ import com.phongvu.restapi.dto.response.UserResponse;
 import com.phongvu.restapi.mapper.UserMapper;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.repository.UserRepo;
+import com.phongvu.restapi.service.IUserService;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -25,7 +28,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserServiceImpl implements UserService {
+public class UserService implements IUserService {
 
     private final UserRepo userRepo;
     private final UserMapper userMapper;
@@ -40,10 +43,7 @@ public class UserServiceImpl implements UserService {
      */
     @Transactional
     public UserResponse createUser(UserCreationRequest request) {
-        if (userRepo.existsByUsername(request.getUsername())) {
-            throw new AppException(ErrorCode.USER_EXISTED);
-        }
-
+        if (userRepo.existsByUsername(request.getUsername())) throw new AppException(ErrorCode.USER_EXISTED);
         User user = userMapper.toUser(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
@@ -62,22 +62,22 @@ public class UserServiceImpl implements UserService {
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> getAllUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
+        if (authentication == null) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         log.info("Username: {}", authentication.getName());
-        authentication.getAuthorities()
-                .forEach(authority -> log.info(authority.getAuthority()));
+        authentication.getAuthorities().forEach(authority -> log.info(authority.getAuthority()));
 
-        return userRepo.findAll().stream()
-                .map(userMapper::toUserResponse)
-                .toList();
+        return userRepo.findAll().stream().map(userMapper::toUserResponse).toList();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<UserResponse> getPage(int page, int size) {
+//        Pageable pageable = Pageable.ofSize(size).withPage(page);
+        return userRepo.findAll(PageRequest.of(page, size)).map(userMapper::toUserResponse);
     }
 
     /**
-     * Retrieves a user by ID. Only the user themselves can view (PostAuthorize).
+     * Retrieves a user by ID. Only the user themselves can view.
      *
      * @param id the user ID
      * @return the user response
@@ -98,13 +98,9 @@ public class UserServiceImpl implements UserService {
     public UserResponse getProfile() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication == null) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
+        if (authentication == null) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
-        String name = authentication.getName();
-
-        User user = userRepo.findUserByUsername(name)
+        User user = userRepo.findUserByUsername(authentication.getName())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         return userMapper.toUserResponse(user);
@@ -113,22 +109,19 @@ public class UserServiceImpl implements UserService {
     /**
      * Updates a user by ID. Requires ADMIN role. Password is encoded if provided.
      *
-     * @param id      the user ID
-     * @param request the update request
-     * @return the updated user response
+     * @param id        the user ID
+     * @param request   the update request
+     * @return          the updated user response
      * @throws AppException if user not found
      */
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public UserResponse updateUser(String id, UserUpdateRequest request) {
-        User user = userRepo.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
+        User user = userRepo.findById(id).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
         userMapper.updateUser(user, request);
 
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+        if (request.getPassword() != null && !request.getPassword().isBlank())
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-        }
 
         return userMapper.toUserResponse(userRepo.save(user));
     }
@@ -142,9 +135,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteUser(String id) {
-        if (!userRepo.existsById(id)) {
-            throw new AppException(ErrorCode.USER_NOT_FOUND);
-        }
+        if (!userRepo.existsById(id)) throw new AppException(ErrorCode.USER_NOT_FOUND);
         userRepo.deleteById(id);
     }
 }

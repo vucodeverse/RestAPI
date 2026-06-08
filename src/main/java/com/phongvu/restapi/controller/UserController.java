@@ -5,10 +5,11 @@ import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
 import com.phongvu.restapi.dto.response.UserResponse;
-import com.phongvu.restapi.service.UserService;
+import com.phongvu.restapi.service.IUserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +21,7 @@ import java.util.List;
 @Tag(name = "User")
 public class  UserController {
 
-    private final UserService userService;
+    private final IUserService userService;
 
     @PostMapping("create")
     ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody @Valid UserCreationRequest request) {
@@ -38,6 +39,16 @@ public class  UserController {
                 SuccessCode.GET_ALL_USER.getCode(),
                 SuccessCode.GET_ALL_USER.getMsg(),
                 userService.getAllUser()));
+    }
+
+    @GetMapping("getPage")
+    ResponseEntity<ApiResponse<Page<UserResponse>>> getPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(
+                SuccessCode.GET_ALL_USER.getCode(),
+                SuccessCode.GET_ALL_USER.getMsg(),
+                userService.getPage(page, size)));
     }
 
     @GetMapping("/getDetail/{id}")
