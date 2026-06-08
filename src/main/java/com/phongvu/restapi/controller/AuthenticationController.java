@@ -6,7 +6,7 @@ import com.phongvu.restapi.dto.request.AuthenticationRequest;
 import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
-import com.phongvu.restapi.service.AuthenticationService;
+import com.phongvu.restapi.service.IAuthenticationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Authentication")
 public class AuthenticationController {
 
-    private final AuthenticationService authenticationService;
+    private final IAuthenticationService authenticationService;
 
     /**
      * Authenticates a user and returns a JWT token.

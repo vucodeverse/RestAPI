@@ -1,4 +1,4 @@
-package com.phongvu.restapi.service;
+package com.phongvu.restapi.service.impl;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
@@ -12,6 +12,7 @@ import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.repository.UserRepo;
+import com.phongvu.restapi.service.IAuthenticationService;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,7 @@ import java.util.StringJoiner;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AuthenticationServiceImpl implements AuthenticationService {
+public class AuthenticationService implements IAuthenticationService {
 
     private final UserRepo userRepo;
     private final PasswordEncoder passwordEncoder;
