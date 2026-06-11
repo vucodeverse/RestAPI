@@ -8,7 +8,7 @@ import com.phongvu.restapi.dto.response.UserResponse;
 import com.phongvu.restapi.mapper.UserMapper;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.repository.UserRepo;
-import com.phongvu.restapi.service.IUserService;
+import com.phongvu.restapi.service.UserService;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +28,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class UserService implements IUserService {
+public class UserServiceImpl implements UserService {
 
     private final UserRepo userRepo;
     private final UserMapper userMapper;
@@ -49,7 +49,7 @@ public class UserService implements IUserService {
 
         HashSet<String> roles = new HashSet<>();
         roles.add(Role.USER.name());
-        user.setRoles(roles);
+//        user.setRoles(roles);
 
         return userMapper.toUserResponse(userRepo.save(user));
     }
@@ -83,7 +83,7 @@ public class UserService implements IUserService {
      * @return the user response
      * @throws AppException if user not found
      */
-    @PostAuthorize("returnObject.username == authentication.name")
+    @PostAuthorize("returnObject.username == authentication.name or hasRole('ADMIN')")
     public UserResponse getUserById(String id) {
         return userMapper.toUserResponse(userRepo.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND)));

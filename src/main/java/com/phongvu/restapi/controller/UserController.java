@@ -5,7 +5,7 @@ import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.UserCreationRequest;
 import com.phongvu.restapi.dto.request.UserUpdateRequest;
 import com.phongvu.restapi.dto.response.UserResponse;
-import com.phongvu.restapi.service.IUserService;
+import com.phongvu.restapi.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +21,9 @@ import java.util.List;
 @Tag(name = "User")
 public class  UserController {
 
-    private final IUserService userService;
+    private final UserService userService;
 
-    @PostMapping("create")
+    @PostMapping()
     ResponseEntity<ApiResponse<UserResponse>> createUser(@RequestBody @Valid UserCreationRequest request) {
         return ResponseEntity
                 .status(SuccessCode.USER_CREATED.getHttpStatus())
@@ -33,15 +33,15 @@ public class  UserController {
                         userService.createUser(request)));
     }
 
-    @GetMapping("getAll")
-    ResponseEntity<ApiResponse<List<UserResponse>>> getAllUser() {
+    @GetMapping()
+    ResponseEntity<ApiResponse<List<UserResponse>>> getAll() {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.GET_ALL_USER.getCode(),
                 SuccessCode.GET_ALL_USER.getMsg(),
                 userService.getAllUser()));
     }
 
-    @GetMapping("getPage")
+    @GetMapping("Page")
     ResponseEntity<ApiResponse<Page<UserResponse>>> getPage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -51,7 +51,7 @@ public class  UserController {
                 userService.getPage(page, size)));
     }
 
-    @GetMapping("/getDetail/{id}")
+    @GetMapping("{id}")
     ResponseEntity<ApiResponse<UserResponse>> getUser(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.GET_USER_BY_ID.getCode(),
@@ -59,7 +59,7 @@ public class  UserController {
                 userService.getUserById(id)));
     }
 
-    @GetMapping("/profile")
+    @GetMapping("profile")
     ResponseEntity<ApiResponse<UserResponse>> getProfile() {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.GET_PROFILE.getCode(),
@@ -67,7 +67,7 @@ public class  UserController {
                 userService.getProfile()));
     }
 
-    @PutMapping("update/{id}")
+    @PutMapping("{id}")
     ResponseEntity<ApiResponse<UserResponse>> updateUser(
             @RequestBody @Valid UserUpdateRequest request,
             @PathVariable String id) {
@@ -77,7 +77,7 @@ public class  UserController {
                 userService.updateUser(id, request)));
     }
 
-    @DeleteMapping("delete/{id}")
+    @DeleteMapping("{id}")
     ResponseEntity<Void> deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

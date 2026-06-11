@@ -5,7 +5,7 @@ import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
 
-public interface IAuthenticationService {
+public interface AuthenticationService {
     AuthenticationResponse authenticate(AuthenticationRequest request);
     IntrospectResponse introspect(IntrospectRequest request);
 }

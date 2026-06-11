@@ -1,4 +1,4 @@
-package com.phongvu.restapi.utils.validation;
+package com.phongvu.restapi.utils.annotation;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

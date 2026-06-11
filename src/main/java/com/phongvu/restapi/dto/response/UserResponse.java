@@ -1,5 +1,6 @@
 package com.phongvu.restapi.dto.response;
 
+import com.phongvu.restapi.model.Role;
 import lombok.*;
 
 import java.time.LocalDate;
@@ -14,5 +15,5 @@ public class UserResponse {
     private String username;
     private String fullName;
     private LocalDate dob;
-    private Set<String> roles;
+    private Set<Role> roles;
 }

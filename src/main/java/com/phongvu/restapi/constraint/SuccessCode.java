@@ -11,6 +11,8 @@ public enum SuccessCode {
     GET_USER_BY_ID(1007, HttpStatus.OK, "Get user successfully"),
     GET_ALL_USER(1008, HttpStatus.OK, "Get all users successfully"),
     GET_PROFILE(1009, HttpStatus.OK, "Get profile successfully"),
+    PER_CREATED(1014, HttpStatus.CREATED, "Permission user successfully"),
+    GET_ALL_PER(1008, HttpStatus.OK, "Get all permissions successfully"),
     AUTHENTICATED(2003, HttpStatus.OK, "Authenticated successfully"),
     INTROSPECT_SUCCESS(2004, HttpStatus.OK, "Token introspection successful");
 

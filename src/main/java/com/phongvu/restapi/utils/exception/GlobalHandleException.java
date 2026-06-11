@@ -31,7 +31,8 @@ public class GlobalHandleException {
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
     ResponseEntity<ApiResponse<?>> handlingValidation(MethodArgumentNotValidException e) {
         String message = Objects.requireNonNull(e.getFieldError()).getDefaultMessage();
-        return ResponseEntity.badRequest()
+        return ResponseEntity
+                .badRequest()
                 .body(ApiResponse.error(400, message));
     }
 

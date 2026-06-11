@@ -33,7 +33,7 @@ public class ApplicationInitConfig {
                 User user = new User();
                 user.setUsername("admin");
                 user.setPassword(passwordEncoder.encode(adminPassword));
-                user.setRoles(roles);
+//                user.setRoles(roles);
 
                 userRepo.save(user);
                 log.warn("Admin user created with default password. Please change it immediately!");

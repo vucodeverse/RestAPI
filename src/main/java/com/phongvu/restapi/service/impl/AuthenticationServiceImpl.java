@@ -12,7 +12,7 @@ import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.repository.UserRepo;
-import com.phongvu.restapi.service.IAuthenticationService;
+import com.phongvu.restapi.service.AuthenticationService;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ import java.util.StringJoiner;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AuthenticationService implements IAuthenticationService {
+public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final UserRepo userRepo;
     private final PasswordEncoder passwordEncoder;
@@ -56,12 +56,8 @@ public class AuthenticationService implements IAuthenticationService {
 
         boolean auth = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
-        if (!auth) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
-
+        if (!auth) throw new AppException(ErrorCode.UNAUTHENTICATED);
         var token = genToken(user);
-
         return AuthenticationResponse
                 .builder()
                 .token(token)
@@ -72,7 +68,7 @@ public class AuthenticationService implements IAuthenticationService {
     private String buildScope(User user) {
         StringJoiner stringJoiner = new StringJoiner(" ");
         if (!CollectionUtils.isEmpty(user.getRoles())) {
-            user.getRoles().forEach(stringJoiner::add);
+//            user.getRoles().forEach(stringJoiner::add);
         }
         return stringJoiner.toString();
     }
@@ -123,38 +119,23 @@ public class AuthenticationService implements IAuthenticationService {
         try {
             String token = request.getToken();
 
-            if (token == null || token.isBlank()) {
-                return IntrospectResponse.builder()
-                        .valid(false)
-                        .build();
-            }
+            if (token == null || token.isBlank())
+                return IntrospectResponse.builder().valid(false).build();
 
             SignedJWT signedJWT = SignedJWT.parse(token);
 
-            if (!JWSAlgorithm.HS256.equals(
-                    signedJWT.getHeader().getAlgorithm())) {
-                return IntrospectResponse.builder()
-                        .valid(false)
-                        .build();
-            }
+            if (!JWSAlgorithm.HS256.equals(signedJWT.getHeader().getAlgorithm()))
+                return IntrospectResponse.builder().valid(false).build();
 
             JWSVerifier jwsVerifier = new MACVerifier(secretKey.getBytes(StandardCharsets.UTF_8));
-
             Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-
-            boolean notExpired = expirationTime != null
-                    && expirationTime.after(new Date());
-
+            boolean notExpired = expirationTime != null && expirationTime.after(new Date());
             boolean signatureValid = signedJWT.verify(jwsVerifier);
 
-            return IntrospectResponse.builder()
-                    .valid(signatureValid && notExpired)
-                    .build();
+            return IntrospectResponse.builder().valid(signatureValid && notExpired).build();
         } catch (JOSEException | ParseException e) {
             log.warn("Invalid JWT token", e);
-            return IntrospectResponse.builder()
-                    .valid(false)
-                    .build();
+            return IntrospectResponse.builder().valid(false).build();
         }
     }
 }

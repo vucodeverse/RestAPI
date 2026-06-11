@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 
 import java.util.List;
 
-public interface IUserService {
+public interface UserService {
     UserResponse createUser(UserCreationRequest request);
     List<UserResponse> getAllUser();
     Page<UserResponse> getPage(int page, int size);
