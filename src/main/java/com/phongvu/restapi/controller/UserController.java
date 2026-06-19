@@ -41,7 +41,7 @@ public class  UserController {
                 userService.getAllUser()));
     }
 
-    @GetMapping("Page")
+    @GetMapping("page")
     ResponseEntity<ApiResponse<Page<UserResponse>>> getPage(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {

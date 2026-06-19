@@ -1,6 +1,8 @@
 package com.phongvu.restapi.controller;
 
 import com.phongvu.restapi.constraint.SuccessCode;
+import com.phongvu.restapi.dto.request.LogoutRequest;
+import com.phongvu.restapi.dto.request.RefreshTokenRequest;
 import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.AuthenticationRequest;
 import com.phongvu.restapi.dto.request.IntrospectRequest;
@@ -30,8 +32,7 @@ public class AuthenticationController {
      *         authentication result
      */
     @PostMapping("authenticate")
-    ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(
-            @RequestBody @Valid AuthenticationRequest request) {
+    ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody @Valid AuthenticationRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.AUTHENTICATED.getCode(),
                 SuccessCode.AUTHENTICATED.getMsg(),
@@ -45,11 +46,24 @@ public class AuthenticationController {
      * @return HTTP 200 response with token validity information
      */
     @PostMapping(path = "introspect")
-    ResponseEntity<ApiResponse<IntrospectResponse>> introspect(
-            @RequestBody @Valid IntrospectRequest request) {
+    ResponseEntity<ApiResponse<IntrospectResponse>> introspect(@RequestBody @Valid IntrospectRequest request) {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.INTROSPECT_SUCCESS.getCode(),
                 SuccessCode.INTROSPECT_SUCCESS.getMsg(),
                 authenticationService.introspect(request)));
+    }
+
+    @PostMapping(path = "logout")
+    ResponseEntity<ApiResponse<Void>> logout(@RequestBody @Valid LogoutRequest request) {
+        authenticationService.logout(request);
+        return ResponseEntity.ok(ApiResponse.success(200, "Logout successful", null));
+    }
+
+    @PostMapping(path = "refresh")
+    ResponseEntity<ApiResponse<AuthenticationResponse>> refresh(@RequestBody @Valid RefreshTokenRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                200,
+                "Token refreshed successfully",
+                authenticationService.refreshToken(request)));
     }
 }
