@@ -20,6 +20,9 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -41,6 +44,9 @@ public class SecurityConfig {
     // Get the secret key from application.properties
     @Value("${jwt.secret}")
     private String secretKey;
+
+    @Value("${app.cors.allowed-origins:*}")
+    private String corsAllowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -82,8 +88,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        SecretKey key = new SecretKeySpec(
-                secretKey.getBytes(), "HS256");
+        SecretKey key = new SecretKeySpec(secretKey.getBytes(), "HS256");
 
         return NimbusJwtDecoder
                 .withSecretKey(key)
@@ -101,5 +106,24 @@ public class SecurityConfig {
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")));
+    }
+
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+        if ("*".equals(corsAllowedOrigins)) {
+            corsConfiguration.addAllowedOriginPattern("*");
+        } else {
+            for (String origin : corsAllowedOrigins.split(",")) {
+                corsConfiguration.addAllowedOrigin(origin.trim());
+            }
+        }
+        corsConfiguration.addAllowedMethod("*");
+        corsConfiguration.addAllowedHeader("*");
+
+        UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+        urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
+
+        return new CorsFilter(urlBasedCorsConfigurationSource);
     }
 }

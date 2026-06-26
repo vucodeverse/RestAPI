@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Objects;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestControllerAdvice
+@Slf4j
 public class GlobalHandleException {
 
     @ExceptionHandler(value = AppException.class)
@@ -38,6 +41,7 @@ public class GlobalHandleException {
 
     @ExceptionHandler(value = Exception.class)
     ResponseEntity<ApiResponse<?>> handlingGeneralException(Exception e) {
+        log.error("Unhandled Exception: ", e);
         ErrorCode errorCode = ErrorCode.INTERNAL_SERVER_ERROR;
         return ResponseEntity
                 .status(errorCode.getHttpStatus())
