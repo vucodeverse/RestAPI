@@ -53,12 +53,22 @@ public class AuthenticationController {
                 authenticationService.introspect(request)));
     }
 
+    /**
+     *
+     * @param request
+     * @return
+     */
     @PostMapping(path = "logout")
     ResponseEntity<ApiResponse<Void>> logout(@RequestBody @Valid LogoutRequest request) {
         authenticationService.logout(request);
         return ResponseEntity.ok(ApiResponse.success(200, "Logout successful", null));
     }
 
+    /**
+     *
+     * @param request
+     * @return
+     */
     @PostMapping(path = "refresh")
     ResponseEntity<ApiResponse<AuthenticationResponse>> refresh(@RequestBody @Valid RefreshTokenRequest request) {
         return ResponseEntity.ok(ApiResponse.success(

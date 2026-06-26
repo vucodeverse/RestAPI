@@ -1,7 +1,7 @@
 package com.phongvu.restapi.configuration;
 
 import com.phongvu.restapi.model.Permission;
-import com.phongvu.restapi.repository.PermissionRepo;
+import com.phongvu.restapi.repository.PermissionRepository;
 import com.phongvu.restapi.utils.annotation.RequirePermission;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +18,7 @@ import java.util.Map;
 @Slf4j
 public class PermissionSeeder implements ApplicationRunner {
     private final RequestMappingHandlerMapping requestMappingHandlerMapping;
-    private final PermissionRepo permissionRepository;
+    private final PermissionRepository permissionRepository;
 
     @Override
     public void run(ApplicationArguments args) throws Exception {

@@ -2,7 +2,7 @@ package com.phongvu.restapi.configuration;
 
 import com.phongvu.restapi.constraint.Role;
 import com.phongvu.restapi.model.User;
-import com.phongvu.restapi.repository.UserRepo;
+import com.phongvu.restapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,9 +24,9 @@ public class ApplicationInitConfig {
     private String adminPassword;
 
     @Bean
-    ApplicationRunner applicationRunner(UserRepo userRepo) {
+    ApplicationRunner applicationRunner(UserRepository userRepository) {
         return args -> {
-            if (userRepo.findUserByUsername("admin").isEmpty()) {
+            if (userRepository.findUserByUsername("admin").isEmpty()) {
                 var roles = new HashSet<String>();
                 roles.add(Role.ADMIN.name());
 
@@ -35,7 +35,7 @@ public class ApplicationInitConfig {
                 user.setPassword(passwordEncoder.encode(adminPassword));
 //                user.setRoles(roles);
 
-                userRepo.save(user);
+                userRepository.save(user);
                 log.warn("Admin user created with default password. Please change it immediately!");
             }
         };

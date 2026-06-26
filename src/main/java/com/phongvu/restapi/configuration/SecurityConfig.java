@@ -23,6 +23,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -54,19 +55,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity httpSecurity, StringRedisTemplate redisTemplate) throws Exception {
         httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         authorize -> authorize.requestMatchers(
                                 HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
                                 .requestMatchers(SWAGGER_ENDPOINTS).permitAll()
-                                // .requestMatchers(HttpMethod.GET, "/users").hasAuthority("ROLE_ADMIN")
-                                // .requestMatchers(HttpMethod.GET, "/users").hasRole(Role.ADMIN.name())
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder())
+                        .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder(redisTemplate))
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter()))
                         .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
                 );
@@ -87,13 +87,30 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder() {
+    public JwtDecoder jwtDecoder(org.springframework.data.redis.core.StringRedisTemplate redisTemplate) {
         SecretKey key = new SecretKeySpec(secretKey.getBytes(), "HS256");
 
-        return NimbusJwtDecoder
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
                 .withSecretKey(key)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+
+        org.springframework.security.oauth2.core.OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt> defaultValidator = 
+            org.springframework.security.oauth2.jwt.JwtValidators.createDefaultWithIssuer("jwt.com");
+
+        org.springframework.security.oauth2.core.OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt> redisValidator = token -> {
+            String sessionId = token.getClaimAsString("session_id");
+            if (sessionId != null && Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:session:" + sessionId))) {
+                return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
+                    new org.springframework.security.oauth2.core.OAuth2Error("invalid_token", "Token has been revoked", null)
+                );
+            }
+            return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success();
+        };
+
+        jwtDecoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(defaultValidator, redisValidator));
+
+        return jwtDecoder;
     }
 
     @Bean

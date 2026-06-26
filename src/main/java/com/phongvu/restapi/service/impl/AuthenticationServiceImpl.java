@@ -6,21 +6,19 @@ import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import com.phongvu.restapi.constraint.ErrorCode;
-import com.phongvu.restapi.dto.request.AuthenticationRequest;
-import com.phongvu.restapi.dto.request.IntrospectRequest;
-import com.phongvu.restapi.dto.request.LogoutRequest;
-import com.phongvu.restapi.dto.request.RefreshTokenRequest;
+import com.phongvu.restapi.dto.request.*;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
-import com.phongvu.restapi.model.InvalidatedToken;
 import com.phongvu.restapi.model.User;
-import com.phongvu.restapi.repository.InvalidatedTokenRepo;
-import com.phongvu.restapi.repository.UserRepo;
+import com.phongvu.restapi.model.UserSession;
+import com.phongvu.restapi.repository.UserRepository;
+import com.phongvu.restapi.repository.UserSessionRepository;
 import com.phongvu.restapi.service.AuthenticationService;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -38,9 +36,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
 
-    private final UserRepo userRepo;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final InvalidatedTokenRepo invalidatedTokenRepository;
+    private final UserSessionRepository userSessionRepository;
+    private final StringRedisTemplate redisTemplate;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -63,13 +62,25 @@ public class AuthenticationServiceImpl implements AuthenticationService {
      * @throws AppException if user not found or password is incorrect
      */
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
-        var user = userRepo.findUserByUsername(request.getUsername())
+        var user = userRepository.findUserByUsername(request.getUsername())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         boolean auth = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
         if (!auth) throw new AppException(ErrorCode.UNAUTHENTICATED);
-        var token = genToken(user);
+        
+        String sessionId = UUID.randomUUID().toString();
+        var token = genToken(user, sessionId);
+        
+        UserSession session = UserSession.builder()
+                .id(sessionId)
+                .user(user)
+                .deviceInfo("Unknown Device") // Có thể bổ sung từ User-Agent header sau
+                .ipAddress("0.0.0.0") // Bổ sung lấy từ request sau
+                .isRevoked(false)
+                .build();
+        userSessionRepository.save(session);
+        
         return AuthenticationResponse
                 .builder()
                 .token(token)
@@ -96,7 +107,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
      * @return a serialized JWT token string
      * @throws AppException if token generation fails
      */
-    private String genToken(User user) {
+    private String genToken(User user, String sessionId) {
         try {
             JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
             JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
@@ -106,6 +117,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .expirationTime(Date.from(Instant.now().plus(validDuration, ChronoUnit.SECONDS)))
                     .jwtID(UUID.randomUUID().toString())
                     .claim("scope", buildScope(user))
+                    .claim("session_id", sessionId)
                     .build();
 
             Payload payload = new Payload(claimsSet.toJSONObject());
@@ -131,8 +143,11 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var verified = signedJWT.verify(verifier);
         if (!(verified && expiryTime.after(new Date())))
             throw new AppException(ErrorCode.UNAUTHENTICATED);
-        if (invalidatedTokenRepository.existsById(signedJWT.getJWTClaimsSet().getJWTID()))
+            
+        String sessionId = signedJWT.getJWTClaimsSet().getStringClaim("session_id");
+        if (sessionId != null && Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:session:" + sessionId))) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
 
         return signedJWT;
     }
@@ -158,21 +173,37 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public AuthenticationResponse refreshToken(RefreshTokenRequest request) {
         try {
             var signedJWT = verifyToken(request.getToken(), true);
-            String jwtId = signedJWT.getJWTClaimsSet().getJWTID();
+            String oldSessionId = signedJWT.getJWTClaimsSet().getStringClaim("session_id");
             Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-
-            // Save token in Blacklist to vô hiệu hóa old token
-            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
-                    .id(jwtId)
-                    .expiryTime(expiryTime)
-                    .build();
-            invalidatedTokenRepository.save(invalidatedToken);
+            
+            // Đưa old session vào blacklist trên Redis
+            if (oldSessionId != null) {
+                long ttl = expiryTime.getTime() - new Date().getTime();
+                if (ttl > 0) {
+                    redisTemplate.opsForValue().set("blacklist:session:" + oldSessionId, "revoked", ttl, java.util.concurrent.TimeUnit.MILLISECONDS);
+                }
+                userSessionRepository.findById(oldSessionId).ifPresent(session -> {
+                    session.setRevoked(true);
+                    userSessionRepository.save(session);
+                });
+            }
 
             var username = signedJWT.getJWTClaimsSet().getSubject();
-            var user = userRepo.findUserByUsername(username)
+            var user = userRepository.findUserByUsername(username)
                     .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
-            var token = genToken(user);
+            String newSessionId = UUID.randomUUID().toString();
+            var token = genToken(user, newSessionId);
+            
+            UserSession session = UserSession.builder()
+                    .id(newSessionId)
+                    .user(user)
+                    .deviceInfo("Refreshed Session")
+                    .ipAddress("0.0.0.0")
+                    .isRevoked(false)
+                    .build();
+            userSessionRepository.save(session);
+            
             return AuthenticationResponse.builder()
                     .token(token)
                     .isAuthenticated(true)
@@ -187,18 +218,26 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public void logout(LogoutRequest request) {
         try {
             var signToken = verifyToken(request.getToken(), true);
-            String jwtId = signToken.getJWTClaimsSet().getJWTID();
+            String sessionId = signToken.getJWTClaimsSet().getStringClaim("session_id");
             Date expiryTime = signToken.getJWTClaimsSet().getExpirationTime();
 
-            // Save token in Blacklist
-            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
-                    .id(jwtId)
-                    .expiryTime(expiryTime)
-                    .build();
-            invalidatedTokenRepository.save(invalidatedToken);
+            if (sessionId != null) {
+                long ttl = expiryTime.getTime() - new Date().getTime();
+                if (ttl > 0) {
+                    redisTemplate.opsForValue().set("blacklist:session:" + sessionId, "revoked", ttl, java.util.concurrent.TimeUnit.MILLISECONDS);
+                }
+                userSessionRepository.findById(sessionId).ifPresent(session -> {
+                    session.setRevoked(true);
+                    userSessionRepository.save(session);
+                });
+            }
             log.info("Token đã được logout thành công!");
         } catch (AppException | JOSEException | ParseException e) {
             log.warn("Token already expired or invalid", e);
         }
+    }
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request) {
     }
 }
