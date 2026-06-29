@@ -34,8 +34,8 @@ import javax.crypto.spec.SecretKeySpec;
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
-            "/api/users/**",
-            "/api/identity/**"
+            "/api/v1/users/**",
+            "/api/v1/identity/**"
     };
     private static final String[] SWAGGER_ENDPOINTS = {
             "/v3/api-docs/**",
@@ -59,6 +59,11 @@ public class SecurityConfig {
             HttpSecurity httpSecurity, StringRedisTemplate redisTemplate) throws Exception {
         httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers
+                        .xssProtection(xss -> xss.disable()) // Disabled because we are an API
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
+                        .frameOptions(frame -> frame.deny())
+                )
                 .authorizeHttpRequests(
                         authorize -> authorize.requestMatchers(
                                 HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()

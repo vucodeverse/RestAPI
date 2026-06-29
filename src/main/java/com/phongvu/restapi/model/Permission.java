@@ -10,7 +10,7 @@ import lombok.*;
 @Getter
 @Setter
 @Builder
-public class Permission {
+public class Permission extends BaseEntity {
     @Id
     private Integer id;
     private String name;

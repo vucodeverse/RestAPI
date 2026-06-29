@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/sessions")
+@RequestMapping("api/v1/sessions")
 @RequiredArgsConstructor
 @Tag(name = "User Sessions")
 public class SessionController {
