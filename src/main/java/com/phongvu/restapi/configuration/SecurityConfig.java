@@ -1,9 +1,9 @@
 package com.phongvu.restapi.configuration;
 
+import org.springframework.http.HttpMethod;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -11,10 +11,10 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.*;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.core.*;
 import org.springframework.security.web.SecurityFilterChain;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -95,20 +95,18 @@ public class SecurityConfig {
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
 
-        org.springframework.security.oauth2.core.OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt> defaultValidator = 
-            org.springframework.security.oauth2.jwt.JwtValidators.createDefaultWithIssuer("jwt.com");
-
-        org.springframework.security.oauth2.core.OAuth2TokenValidator<org.springframework.security.oauth2.jwt.Jwt> redisValidator = token -> {
+        OAuth2TokenValidator<Jwt> defaultValidator = JwtValidators.createDefaultWithIssuer("jwt.com");
+        OAuth2TokenValidator<Jwt> redisValidator = token -> {
             String sessionId = token.getClaimAsString("session_id");
             if (sessionId != null && Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:session:" + sessionId))) {
-                return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
-                    new org.springframework.security.oauth2.core.OAuth2Error("invalid_token", "Token has been revoked", null)
+                return OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "Token has been revoked", null)
                 );
             }
-            return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success();
+            return OAuth2TokenValidatorResult.success();
         };
 
-        jwtDecoder.setJwtValidator(new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(defaultValidator, redisValidator));
+        jwtDecoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(defaultValidator, redisValidator));
 
         return jwtDecoder;
     }
