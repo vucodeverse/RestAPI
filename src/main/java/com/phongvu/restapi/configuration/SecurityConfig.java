@@ -63,6 +63,8 @@ public class SecurityConfig {
                         .xssProtection(xss -> xss.disable()) // Disabled because we are an API
                         .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
                         .frameOptions(frame -> frame.deny())
+                        .httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31536000))
+                        .contentTypeOptions(contentType -> {}) // This explicitly adds X-Content-Type-Options: nosniff
                 )
                 .authorizeHttpRequests(
                         authorize -> authorize.requestMatchers(
