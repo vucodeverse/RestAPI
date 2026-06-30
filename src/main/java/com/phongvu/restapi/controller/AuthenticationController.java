@@ -5,6 +5,8 @@ import com.phongvu.restapi.dto.request.LogoutRequest;
 import com.phongvu.restapi.dto.request.RefreshTokenRequest;
 import com.phongvu.restapi.dto.response.ApiResponse;
 import com.phongvu.restapi.dto.request.AuthenticationRequest;
+import com.phongvu.restapi.dto.request.ForgotPasswordRequest;
+import com.phongvu.restapi.dto.request.ResetPasswordRequest;
 import com.phongvu.restapi.dto.request.IntrospectRequest;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
@@ -76,5 +78,17 @@ public class AuthenticationController {
                 200,
                 "Token refreshed successfully",
                 authenticationService.refreshToken(request, httpServletRequest)));
+    }
+
+    @PostMapping(path = "forgot-password")
+    ResponseEntity<ApiResponse<Void>> forgotPassword(@RequestBody @Valid ForgotPasswordRequest request) {
+        authenticationService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.success(200, "If email exists, a reset link will be sent", null));
+    }
+
+    @PostMapping(path = "reset-password")
+    ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody @Valid ResetPasswordRequest request) {
+        authenticationService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success(200, "Password has been reset successfully", null));
     }
 }

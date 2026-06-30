@@ -11,5 +11,6 @@ public interface AuthenticationService {
     AuthenticationResponse refreshToken(RefreshTokenRequest request, HttpServletRequest httpServletRequest);
     void logout(LogoutRequest request);
     void forgotPassword(ForgotPasswordRequest request);
+    void resetPassword(ResetPasswordRequest request);
     String genToken(com.phongvu.restapi.model.User user, HttpServletRequest httpServletRequest);
 }

@@ -18,6 +18,10 @@ public class User extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String username;
+    
+    @Column(unique = true, nullable = false)
+    private String email;
+    
     private String password;
 
     @Column(name = "totp_secret")

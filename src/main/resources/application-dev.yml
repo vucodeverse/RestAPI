@@ -15,6 +15,15 @@ spring:
     properties:
       hibernate:
         format_sql: true
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 
 jwt:
   secret: ${JWT_SECRET:your-fallback-very-long-secret-key-for-dev-12345678901234567890}

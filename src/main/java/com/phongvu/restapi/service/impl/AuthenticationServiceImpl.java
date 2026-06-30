@@ -11,9 +11,12 @@ import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.model.UserSession;
+import com.phongvu.restapi.model.PasswordResetToken;
+import com.phongvu.restapi.repository.PasswordResetTokenRepository;
 import com.phongvu.restapi.repository.UserRepository;
 import com.phongvu.restapi.repository.UserSessionRepository;
 import com.phongvu.restapi.service.AuthenticationService;
+import com.phongvu.restapi.service.MailService;
 import com.phongvu.restapi.utils.exception.AppException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,9 +27,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.Base64;
+import java.util.concurrent.TimeUnit;
+import java.security.MessageDigest;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.StringJoiner;
@@ -41,6 +48,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final UserSessionRepository userSessionRepository;
     private final StringRedisTemplate redisTemplate;
+    private final MailService mailService;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -299,7 +308,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             if (sessionId != null) {
                 long ttl = expiryTime.getTime() - new Date().getTime();
                 if (ttl > 0) {
-                    redisTemplate.opsForValue().set("blacklist:session:" + sessionId, "revoked", ttl, java.util.concurrent.TimeUnit.MILLISECONDS);
+                    redisTemplate.opsForValue().set("blacklist:session:" + sessionId, "revoked", ttl, TimeUnit.MILLISECONDS);
                 }
                 userSessionRepository.findById(sessionId).ifPresent(session -> {
                     session.setRevoked(true);
@@ -312,7 +321,50 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 
+    private String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        String rawToken = UUID.randomUUID().toString();
+        String hashedToken = hashToken(rawToken);
+
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .tokenHash(hashedToken)
+                .user(user)
+                .expiryDate(LocalDateTime.now().plusMinutes(15))
+                .isUsed(false)
+                .build();
+        passwordResetTokenRepository.save(resetToken);
+
+        mailService.sendResetPasswordEmail(user.getEmail(), rawToken);
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        String hashedToken = hashToken(request.getToken());
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenHashAndIsUsedFalse(hashedToken)
+                .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
     }
 }
