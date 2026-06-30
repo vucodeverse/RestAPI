@@ -37,11 +37,23 @@ services:
       - SPRING_DATASOURCE_PASSWORD=sa
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
+      - SPRING_BOOT_ADMIN_CLIENT_URL=http://admin:8080
     depends_on:
       sqlserver:
         condition: service_healthy
       redis:
         condition: service_started
+      admin:
+        condition: service_started
+
+  admin:
+    image: bessbd/spring-boot-admin:3.2.0
+    container_name: restapi-admin
+    ports:
+      - "8081:8080"
+    environment:
+      - SPRING_SECURITY_USER_NAME=admin
+      - SPRING_SECURITY_USER_PASSWORD=admin
 
 volumes:
   sqlserver_data:

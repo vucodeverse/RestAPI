@@ -69,6 +69,19 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         if (!auth) throw new AppException(ErrorCode.UNAUTHENTICATED);
         
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getName()));
+        boolean mfaRequired = isAdmin || user.is2faEnabled() || user.getTotpSecret() != null;
+        
+        if (mfaRequired) {
+            String tempToken = genPreAuthToken(user);
+            return AuthenticationResponse
+                    .builder()
+                    .token(tempToken)
+                    .authenticated(false)
+                    .mfaRequired(true)
+                    .build();
+        }
+        
         String sessionId = UUID.randomUUID().toString();
         var token = genToken(user, sessionId);
         
@@ -84,7 +97,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return AuthenticationResponse
                 .builder()
                 .token(token)
-                .isAuthenticated(true)
+                .authenticated(true)
+                .mfaRequired(false)
                 .build();
     }
 
@@ -135,6 +149,45 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             log.error("Cannot create token", e);
             throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private String genPreAuthToken(User user) {
+        try {
+            JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
+            JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
+                    .subject(user.getUsername())
+                    .issuer("jwt.com")
+                    .issueTime(new Date())
+                    .expirationTime(Date.from(Instant.now().plus(5, ChronoUnit.MINUTES)))
+                    .jwtID(UUID.randomUUID().toString())
+                    .claim("scope", "PRE_AUTH")
+                    .build();
+
+            Payload payload = new Payload(claimsSet.toJSONObject());
+            JWSObject jwsObject = new JWSObject(header, payload);
+            jwsObject.sign(new MACSigner(secretKey.getBytes(StandardCharsets.UTF_8)));
+
+            return jwsObject.serialize();
+
+        } catch (JOSEException e) {
+            log.error("Cannot create pre-auth token", e);
+            throw new AppException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public String genToken(User user) {
+        String sessionId = UUID.randomUUID().toString();
+        String token = genToken(user, sessionId);
+        
+        UserSession session = UserSession.builder()
+                .id(sessionId)
+                .user(user)
+                .deviceInfo("Verified 2FA Device")
+                .ipAddress("0.0.0.0")
+                .isRevoked(false)
+                .build();
+        userSessionRepository.save(session);
+        return token;
     }
 
     private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
@@ -211,7 +264,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             
             return AuthenticationResponse.builder()
                     .token(token)
-                    .isAuthenticated(true)
+                    .authenticated(true)
                     .build();
         } catch (JOSEException | ParseException e) {
             log.error("Cannot refresh token", e);

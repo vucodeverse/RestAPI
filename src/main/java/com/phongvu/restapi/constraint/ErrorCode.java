@@ -10,6 +10,8 @@ public enum ErrorCode {
     USER_NOT_FOUND(1003, HttpStatus.NOT_FOUND, "User not found"),
     UNAUTHENTICATED(2001, HttpStatus.UNAUTHORIZED, "Unauthenticated"),
     UNAUTHORIZED(2002, HttpStatus.FORBIDDEN, "You do not have permission"),
+    UNCATEGORIZED_EXCEPTION(9998, HttpStatus.INTERNAL_SERVER_ERROR, "Uncategorized error"),
+    INVALID_KEY(1004, HttpStatus.BAD_REQUEST, "Invalid message key"),
     INTERNAL_SERVER_ERROR(9999, HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
 
     ErrorCode(int code, HttpStatus httpStatus, String msg) {

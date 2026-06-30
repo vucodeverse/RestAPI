@@ -1,13 +1,16 @@
 package com.phongvu.restapi.dto.response;
 
 import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@FieldDefaults(level = AccessLevel.PRIVATE)
 @Getter
 @Setter
-@Builder
 public class AuthenticationResponse {
-    private String token;
-    private boolean isAuthenticated;
+    String token;
+    boolean authenticated;
+    boolean mfaRequired;
 }

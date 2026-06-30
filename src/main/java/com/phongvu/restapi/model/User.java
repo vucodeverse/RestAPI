@@ -19,6 +19,14 @@ public class User extends BaseEntity {
     private String id;
     private String username;
     private String password;
+
+    @Column(name = "totp_secret")
+    private String totpSecret;
+
+    @Column(name = "is_2fa_enabled", nullable = false)
+    @Builder.Default
+    private boolean is2faEnabled = false;
+
     private String fullName;
     private LocalDate dob;
     @ManyToMany

@@ -1,4 +1,8 @@
 spring:
+  boot:
+    admin:
+      client:
+        url: http://localhost:8081
   datasource:
     url: jdbc:sqlserver://localhost:1433;databaseName=RestAPI;encrypt=true;trustServerCertificate=true
     username: sa
@@ -24,3 +28,15 @@ app:
 logging:
   level:
     com.phongvu.restapi: debug
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: RestAPI
