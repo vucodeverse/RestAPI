@@ -11,6 +11,7 @@ import com.phongvu.restapi.dto.response.IntrospectResponse;
 import com.phongvu.restapi.service.AuthenticationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,11 +33,11 @@ public class AuthenticationController {
      *         authentication result
      */
     @PostMapping("authenticate")
-    ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody @Valid AuthenticationRequest request) {
+    ResponseEntity<ApiResponse<AuthenticationResponse>> authenticate(@RequestBody @Valid AuthenticationRequest request, HttpServletRequest httpServletRequest) {
         return ResponseEntity.ok(ApiResponse.success(
                 SuccessCode.AUTHENTICATED.getCode(),
                 SuccessCode.AUTHENTICATED.getMsg(),
-                authenticationService.authenticate(request)));
+                authenticationService.authenticate(request, httpServletRequest)));
     }
 
     /**
@@ -70,10 +71,10 @@ public class AuthenticationController {
      * @return
      */
     @PostMapping(path = "refresh")
-    ResponseEntity<ApiResponse<AuthenticationResponse>> refresh(@RequestBody @Valid RefreshTokenRequest request) {
+    ResponseEntity<ApiResponse<AuthenticationResponse>> refresh(@RequestBody @Valid RefreshTokenRequest request, HttpServletRequest httpServletRequest) {
         return ResponseEntity.ok(ApiResponse.success(
                 200,
                 "Token refreshed successfully",
-                authenticationService.refreshToken(request)));
+                authenticationService.refreshToken(request, httpServletRequest)));
     }
 }

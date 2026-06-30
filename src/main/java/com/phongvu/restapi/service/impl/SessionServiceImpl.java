@@ -1,5 +1,6 @@
 package com.phongvu.restapi.service.impl;
 
+import com.phongvu.restapi.dto.response.UserSessionResponse;
 import com.phongvu.restapi.model.UserSession;
 import com.phongvu.restapi.repository.UserSessionRepository;
 import com.phongvu.restapi.service.SessionService;
@@ -20,7 +21,7 @@ public class SessionServiceImpl implements SessionService {
     private final StringRedisTemplate redisTemplate;
 
     @Override
-    public List<UserSession> getActiveSessions() {
+    public List<UserSessionResponse> getActiveSessions() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username = "";
         if (principal instanceof Jwt) {
@@ -29,7 +30,15 @@ public class SessionServiceImpl implements SessionService {
             username = (String) principal;
         }
 
-        return userSessionRepository.findByUser_UsernameAndIsRevokedFalse(username);
+        return userSessionRepository.findByUser_UsernameAndIsRevokedFalse(username)
+                .stream()
+                .map(session -> UserSessionResponse.builder()
+                        .id(session.getId())
+                        .deviceInfo(session.getDeviceInfo())
+                        .ipAddress(session.getIpAddress())
+                        .createdAt(session.getCreatedAt())
+                        .build())
+                .toList();
     }
 
     @Override

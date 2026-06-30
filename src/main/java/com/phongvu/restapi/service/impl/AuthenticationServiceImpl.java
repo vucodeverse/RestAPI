@@ -22,6 +22,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
@@ -61,7 +62,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
      *         authentication status
      * @throws AppException if user not found or password is incorrect
      */
-    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+    public AuthenticationResponse authenticate(AuthenticationRequest request, HttpServletRequest httpServletRequest) {
         var user = userRepository.findUserByUsername(request.getUsername())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
@@ -85,11 +86,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         String sessionId = UUID.randomUUID().toString();
         var token = genToken(user, sessionId);
         
+        String ipAddress = httpServletRequest.getRemoteAddr();
+        String userAgent = httpServletRequest.getHeader("User-Agent");
+        if (userAgent == null) userAgent = "Unknown Device";
+        if (ipAddress == null) ipAddress = "0.0.0.0";
+
         UserSession session = UserSession.builder()
                 .id(sessionId)
                 .user(user)
-                .deviceInfo("Unknown Device") // Có thể bổ sung từ User-Agent header sau
-                .ipAddress("0.0.0.0") // Bổ sung lấy từ request sau
+                .deviceInfo(userAgent)
+                .ipAddress(ipAddress)
                 .isRevoked(false)
                 .build();
         userSessionRepository.save(session);
@@ -175,15 +181,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         }
     }
 
-    public String genToken(User user) {
+    @Override
+    public String genToken(User user, HttpServletRequest httpServletRequest) {
         String sessionId = UUID.randomUUID().toString();
         String token = genToken(user, sessionId);
+        
+        String ipAddress = httpServletRequest.getRemoteAddr();
+        String userAgent = httpServletRequest.getHeader("User-Agent");
+        if (userAgent == null) userAgent = "Unknown Device";
+        if (ipAddress == null) ipAddress = "0.0.0.0";
         
         UserSession session = UserSession.builder()
                 .id(sessionId)
                 .user(user)
-                .deviceInfo("Verified 2FA Device")
-                .ipAddress("0.0.0.0")
+                .deviceInfo(userAgent + " (Verified 2FA)")
+                .ipAddress(ipAddress)
                 .isRevoked(false)
                 .build();
         userSessionRepository.save(session);
@@ -228,7 +240,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
-    public AuthenticationResponse refreshToken(RefreshTokenRequest request) {
+    public AuthenticationResponse refreshToken(RefreshTokenRequest request, HttpServletRequest httpServletRequest) {
         try {
             var signedJWT = verifyToken(request.getToken(), true);
             String oldSessionId = signedJWT.getJWTClaimsSet().getStringClaim("session_id");
@@ -253,11 +265,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             String newSessionId = UUID.randomUUID().toString();
             var token = genToken(user, newSessionId);
             
+            String ipAddress = httpServletRequest.getRemoteAddr();
+            String userAgent = httpServletRequest.getHeader("User-Agent");
+            if (userAgent == null) userAgent = "Unknown Device";
+            if (ipAddress == null) ipAddress = "0.0.0.0";
+
             UserSession session = UserSession.builder()
                     .id(newSessionId)
                     .user(user)
-                    .deviceInfo("Refreshed Session")
-                    .ipAddress("0.0.0.0")
+                    .deviceInfo(userAgent + " (Refreshed)")
+                    .ipAddress(ipAddress)
                     .isRevoked(false)
                     .build();
             userSessionRepository.save(session);

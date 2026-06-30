@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -50,7 +51,7 @@ public class TwoFactorController {
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<ApiResponse<AuthenticationResponse>> verify2fa(@RequestBody TwoFactorVerificationRequest request) {
+    public ResponseEntity<ApiResponse<AuthenticationResponse>> verify2fa(@RequestBody TwoFactorVerificationRequest request, HttpServletRequest httpServletRequest) {
         String username = getUsernameFromContext();
         User user = userRepository.findUserByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -71,7 +72,7 @@ public class TwoFactorController {
         }
 
         // Return the real token
-        String token = authenticationService.genToken(user);
+        String token = authenticationService.genToken(user, httpServletRequest);
         AuthenticationResponse authResponse = AuthenticationResponse.builder()
                 .token(token)
                 .authenticated(true)

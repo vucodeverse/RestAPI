@@ -1,6 +1,7 @@
 package com.phongvu.restapi.controller;
 
 import com.phongvu.restapi.dto.response.ApiResponse;
+import com.phongvu.restapi.dto.response.UserSessionResponse;
 import com.phongvu.restapi.model.UserSession;
 import com.phongvu.restapi.service.SessionService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,8 +20,8 @@ public class SessionController {
     private final SessionService sessionService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<UserSession>>> getActiveSessions() {
-        List<UserSession> sessions = sessionService.getActiveSessions();
+    public ResponseEntity<ApiResponse<List<UserSessionResponse>>> getActiveSessions() {
+        List<UserSessionResponse> sessions = sessionService.getActiveSessions();
         return ResponseEntity.ok(ApiResponse.success(
                 200,
                 "Lấy danh sách thiết bị thành công",
