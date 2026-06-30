@@ -18,15 +18,12 @@ public class JpaAuditingConfig {
     public AuditorAware<String> auditorProvider() {
         return () -> {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (authentication == null || !authentication.isAuthenticated()) {
-                return Optional.of("system");
-            }
-            
+            if (authentication == null || !authentication.isAuthenticated()) return Optional.of("system");
             Object principal = authentication.getPrincipal();
-            if (principal instanceof Jwt) {
-                return Optional.ofNullable(((Jwt) principal).getSubject());
-            } else if (principal instanceof String) {
-                return Optional.of((String) principal);
+            if (principal instanceof Jwt jwt) {
+                return Optional.ofNullable(jwt.getSubject());
+            } else if (principal instanceof String username) {
+                return Optional.of(username);
             }
             return Optional.of(authentication.getName());
         };

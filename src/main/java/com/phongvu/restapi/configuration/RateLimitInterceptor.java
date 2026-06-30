@@ -35,16 +35,11 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        if (!request.getRequestURI().contains("/api/v1/identity/authenticate")) {
-            return true;
-        }
-
+        if (!request.getRequestURI().contains("/api/v1/identity/authenticate")) return true;
         String clientIp = request.getRemoteAddr();
         String key = "ratelimit:auth:" + clientIp;
-        
         // Allowed: 5, Window: 60 seconds
         Long currentCount = redisTemplate.execute(redisScript, Collections.singletonList(key), "5", "60");
-        
         if (currentCount != null && currentCount >= 5) {
             response.setStatus(429);
             response.setContentType("application/json;charset=UTF-8");

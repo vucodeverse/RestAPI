@@ -29,17 +29,14 @@ public class PermissionSeeder implements ApplicationRunner {
             HandlerMethod handlerMethod = entry.getValue();
             // Tìm annotation @RequirePermission trên hàm
             RequirePermission requirePermission = handlerMethod.getMethodAnnotation(RequirePermission.class);
-
             if (requirePermission != null) {
                 RequestMappingInfo mappingInfo = entry.getKey();
-
                 // Trích xuất thông tin API
                 String apiPath = mappingInfo.getPatternValues().iterator().next(); // Lấy path đầu tiên
                 String httpMethod = mappingInfo.getMethodsCondition().getMethods().iterator().next().name();
                 String code = requirePermission.code();
                 // Lưu hoặc cập nhật vào DB
                 Permission permission = permissionRepository.findByCode(code).orElse(new Permission());
-
                 permission.setCode(code);
                 permission.setName(requirePermission.name());
                 permission.setModule(requirePermission.module());

@@ -68,7 +68,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
      *
      * @param request the authentication request containing username and password
      * @return {@link AuthenticationResponse} containing JWT token and
-     *         authentication status
+     * authentication status
      * @throws AppException if user not found or password is incorrect
      */
     public AuthenticationResponse authenticate(AuthenticationRequest request, HttpServletRequest httpServletRequest) {
@@ -78,10 +78,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         boolean auth = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
         if (!auth) throw new AppException(ErrorCode.UNAUTHENTICATED);
-        
+
         boolean isAdmin = user.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getName()));
         boolean mfaRequired = isAdmin || user.is2faEnabled() || user.getTotpSecret() != null;
-        
+
         if (mfaRequired) {
             String tempToken = genPreAuthToken(user);
             return AuthenticationResponse
@@ -91,10 +91,10 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .mfaRequired(true)
                     .build();
         }
-        
+
         String sessionId = UUID.randomUUID().toString();
         var token = genToken(user, sessionId);
-        
+
         String ipAddress = httpServletRequest.getRemoteAddr();
         String userAgent = httpServletRequest.getHeader("User-Agent");
         if (userAgent == null) userAgent = "Unknown Device";
@@ -108,7 +108,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .isRevoked(false)
                 .build();
         userSessionRepository.save(session);
-        
+
         return AuthenticationResponse
                 .builder()
                 .token(token)
@@ -194,12 +194,12 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     public String genToken(User user, HttpServletRequest httpServletRequest) {
         String sessionId = UUID.randomUUID().toString();
         String token = genToken(user, sessionId);
-        
+
         String ipAddress = httpServletRequest.getRemoteAddr();
         String userAgent = httpServletRequest.getHeader("User-Agent");
         if (userAgent == null) userAgent = "Unknown Device";
         if (ipAddress == null) ipAddress = "0.0.0.0";
-        
+
         UserSession session = UserSession.builder()
                 .id(sessionId)
                 .user(user)
@@ -211,22 +211,47 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return token;
     }
 
+    //    private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
+//        JWSVerifier verifier = new MACVerifier(secretKey.getBytes(StandardCharsets.UTF_8));
+//        SignedJWT signedJWT = SignedJWT.parse(token);
+//
+//        Date expiryTime = (isRefresh)
+//                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(refreshableDuration, ChronoUnit.SECONDS).toEpochMilli())
+//                : signedJWT.getJWTClaimsSet().getExpirationTime();
+//
+//        var verified = signedJWT.verify(verifier);
+//        if (!(verified && expiryTime.after(new Date())))
+//            throw new AppException(ErrorCode.UNAUTHENTICATED);
+//
+//        String sessionId = signedJWT.getJWTClaimsSet().getStringClaim("session_id");
+//        if (sessionId != null && Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:session:" + sessionId))) {
+//            throw new AppException(ErrorCode.UNAUTHENTICATED);
+//        }
+//
+//        return signedJWT;
+//    }
     private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
-        JWSVerifier verifier = new MACVerifier(secretKey.getBytes(StandardCharsets.UTF_8));
         SignedJWT signedJWT = SignedJWT.parse(token);
+        JWSVerifier verifier = new MACVerifier(secretKey.getBytes(StandardCharsets.UTF_8));
 
-        Date expiryTime = (isRefresh)
-                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(refreshableDuration, ChronoUnit.SECONDS).toEpochMilli())
-                : signedJWT.getJWTClaimsSet().getExpirationTime();
+        if (!signedJWT.verify(verifier)) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
-        var verified = signedJWT.verify(verifier);
-        if (!(verified && expiryTime.after(new Date())))
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-            
-        String sessionId = signedJWT.getJWTClaimsSet().getStringClaim("session_id");
-        if (sessionId != null && Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:session:" + sessionId))) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+        Date issueTime = claims.getIssueTime();
+        Date expirationTime = claims.getExpirationTime();
+
+        Date expiryTime;
+        if (isRefresh) {
+            if (issueTime == null) throw new AppException(ErrorCode.UNAUTHENTICATED);
+            expiryTime = new Date(issueTime.toInstant().plus(refreshableDuration, ChronoUnit.SECONDS).toEpochMilli());
+        } else {
+            if (expirationTime == null) throw new AppException(ErrorCode.UNAUTHENTICATED);
+            expiryTime = expirationTime;
         }
+        if (!expiryTime.after(new Date())) throw new AppException(ErrorCode.UNAUTHENTICATED);
+        String sessionId = claims.getStringClaim("session_id");
+        if (sessionId != null && Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:session:" + sessionId)))
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         return signedJWT;
     }
@@ -254,7 +279,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
             var signedJWT = verifyToken(request.getToken(), true);
             String oldSessionId = signedJWT.getJWTClaimsSet().getStringClaim("session_id");
             Date expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-            
             // Đưa old session vào blacklist trên Redis
             if (oldSessionId != null) {
                 long ttl = expiryTime.getTime() - new Date().getTime();
@@ -266,14 +290,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     userSessionRepository.save(session);
                 });
             }
-
             var username = signedJWT.getJWTClaimsSet().getSubject();
             var user = userRepository.findUserByUsername(username)
                     .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
             String newSessionId = UUID.randomUUID().toString();
             var token = genToken(user, newSessionId);
-            
+
             String ipAddress = httpServletRequest.getRemoteAddr();
             String userAgent = httpServletRequest.getHeader("User-Agent");
             if (userAgent == null) userAgent = "Unknown Device";
@@ -287,7 +310,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                     .isRevoked(false)
                     .build();
             userSessionRepository.save(session);
-            
+
             return AuthenticationResponse.builder()
                     .token(token)
                     .authenticated(true)
@@ -356,9 +379,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenHashAndIsUsedFalse(hashedToken)
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
-        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new AppException(ErrorCode.UNAUTHENTICATED);
-        }
+        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         User user = resetToken.getUser();
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

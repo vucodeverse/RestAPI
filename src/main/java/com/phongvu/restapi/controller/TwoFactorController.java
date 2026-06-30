@@ -12,6 +12,7 @@ import com.phongvu.restapi.utils.exception.AppException;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import jakarta.servlet.http.HttpServletRequest;
@@ -35,14 +36,11 @@ public class TwoFactorController {
         String username = getUsernameFromContext();
         User user = userRepository.findUserByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
         if (user.getTotpSecret() == null) {
             user.setTotpSecret(twoFactorService.generateNewSecret());
             userRepository.save(user);
         }
-
         String qrCode = twoFactorService.generateQrCodeImageUri(user.getTotpSecret(), user.getUsername());
-        
         Map<String, String> response = new HashMap<>();
         response.put("qrCodeUri", qrCode);
         response.put("secret", user.getTotpSecret());
@@ -83,11 +81,13 @@ public class TwoFactorController {
     }
 
     private String getUsernameFromContext() {
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (principal instanceof Jwt) {
-            return ((Jwt) principal).getSubject();
-        } else if (principal instanceof String) {
-            return (String) principal;
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null) throw new AppException(ErrorCode.UNAUTHENTICATED);
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof Jwt jwt) {
+            return jwt.getSubject();
+        } else if (principal instanceof String username) {
+            return username;
         }
         throw new AppException(ErrorCode.UNAUTHENTICATED);
     }
