@@ -9,15 +9,23 @@ import com.phongvu.restapi.constraint.ErrorCode;
 import com.phongvu.restapi.dto.request.*;
 import com.phongvu.restapi.dto.response.AuthenticationResponse;
 import com.phongvu.restapi.dto.response.IntrospectResponse;
+import com.phongvu.restapi.dto.request.GoogleLoginRequest;
+import com.phongvu.restapi.model.Role;
 import com.phongvu.restapi.model.User;
 import com.phongvu.restapi.model.UserSession;
 import com.phongvu.restapi.model.PasswordResetToken;
 import com.phongvu.restapi.repository.PasswordResetTokenRepository;
 import com.phongvu.restapi.repository.UserRepository;
 import com.phongvu.restapi.repository.UserSessionRepository;
+import com.phongvu.restapi.repository.RoleRepository;
 import com.phongvu.restapi.service.AuthenticationService;
 import com.phongvu.restapi.service.MailService;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.phongvu.restapi.utils.exception.AppException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +46,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.StringJoiner;
 import java.util.UUID;
+import java.util.Collections;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -50,9 +60,13 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final StringRedisTemplate redisTemplate;
     private final MailService mailService;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RoleRepository roleRepository;
 
     @Value("${jwt.secret}")
     private String secretKey;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
 
     @Value("${jwt.valid-duration}")
     private long validDuration;
@@ -211,25 +225,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return token;
     }
 
-    //    private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
-//        JWSVerifier verifier = new MACVerifier(secretKey.getBytes(StandardCharsets.UTF_8));
-//        SignedJWT signedJWT = SignedJWT.parse(token);
-//
-//        Date expiryTime = (isRefresh)
-//                ? new Date(signedJWT.getJWTClaimsSet().getIssueTime().toInstant().plus(refreshableDuration, ChronoUnit.SECONDS).toEpochMilli())
-//                : signedJWT.getJWTClaimsSet().getExpirationTime();
-//
-//        var verified = signedJWT.verify(verifier);
-//        if (!(verified && expiryTime.after(new Date())))
-//            throw new AppException(ErrorCode.UNAUTHENTICATED);
-//
-//        String sessionId = signedJWT.getJWTClaimsSet().getStringClaim("session_id");
-//        if (sessionId != null && Boolean.TRUE.equals(redisTemplate.hasKey("blacklist:session:" + sessionId))) {
-//            throw new AppException(ErrorCode.UNAUTHENTICATED);
-//        }
-//
-//        return signedJWT;
-//    }
+
     private SignedJWT verifyToken(String token, boolean isRefresh) throws JOSEException, ParseException {
         SignedJWT signedJWT = SignedJWT.parse(token);
         JWSVerifier verifier = new MACVerifier(secretKey.getBytes(StandardCharsets.UTF_8));
@@ -355,6 +351,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
+    @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
@@ -374,6 +371,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     @Override
+    @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         String hashedToken = hashToken(request.getToken());
         PasswordResetToken resetToken = passwordResetTokenRepository.findByTokenHashAndIsUsedFalse(hashedToken)
@@ -387,5 +385,66 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
+    }
+
+    @Override
+    public AuthenticationResponse googleLogin(GoogleLoginRequest request, HttpServletRequest httpServletRequest) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(request.getIdToken());
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+                String email = payload.getEmail();
+                String name = (String) payload.get("name");
+
+                User user = userRepository.findByEmail(email).orElse(null);
+                if (user == null) {
+                    // Auto register
+                    user = User.builder()
+                            .email(email)
+                            .username(email.split("@")[0] + "_" + UUID.randomUUID().toString().substring(0, 5))
+                            .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                            .fullName(name)
+                            .is2faEnabled(false)
+                            .build();
+                    Role userRole = roleRepository.findByName("USER")
+                            .orElseThrow(() -> new AppException(ErrorCode.INTERNAL_SERVER_ERROR));
+                    user.setRoles(Set.of(userRole));
+                    userRepository.save(user);
+                }
+
+                String sessionId = UUID.randomUUID().toString();
+                String token = genToken(user, sessionId);
+                
+                String ipAddress = httpServletRequest.getRemoteAddr();
+                String userAgent = httpServletRequest.getHeader("User-Agent");
+                if (userAgent == null) userAgent = "Unknown Device";
+                if (ipAddress == null) ipAddress = "0.0.0.0";
+
+                UserSession session = UserSession.builder()
+                        .id(sessionId)
+                        .user(user)
+                        .deviceInfo(userAgent)
+                        .ipAddress(ipAddress)
+                        .isRevoked(false)
+                        .build();
+                userSessionRepository.save(session);
+
+                return AuthenticationResponse.builder()
+                        .token(token)
+                        .authenticated(true)
+                        .mfaRequired(false)
+                        .build();
+
+            } else {
+                throw new AppException(ErrorCode.UNAUTHENTICATED);
+            }
+        } catch (Exception e) {
+            log.error("Google Login Error", e);
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
     }
 }

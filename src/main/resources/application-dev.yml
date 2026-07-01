@@ -26,13 +26,18 @@ spring:
             enable: false
 
 jwt:
-  secret: ${JWT_SECRET:your-fallback-very-long-secret-key-for-dev-12345678901234567890}
+  secret: ${JWT_SECRET:dev-only-fallback-secret-key-never-use-in-production-must-be-32chars-min}
+
+google:
+  client-id: ${GOOGLE_CLIENT_ID:your-placeholder-client-id.apps.googleusercontent.com}
 
 app:
   admin:
-    password: Admin@123
+    # C6 Fix: Use env variable — set ADMIN_PASSWORD in .env for docker, or env var locally
+    password: ${ADMIN_PASSWORD:Admin@123}
   cors:
-    allowed-origins: "http://localhost:3000, http://localhost:8081, http://localhost:8080"
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8081,http://localhost:8080}
+
 
 logging:
   level:

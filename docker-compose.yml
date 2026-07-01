@@ -1,18 +1,21 @@
 version: '3.8'
+
+# C5 Fix: All secrets loaded from .env file (copy .env.example → .env)
+# Run: cp .env.example .env  then fill in real values
 services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: restapi-sqlserver
     environment:
       ACCEPT_EULA: Y
-      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
       MSSQL_PID: Developer
     ports:
       - "1433:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-U", "sa", "-P", "YourStrong!Passw0rd", "-C", "-Q", "SELECT 1"]
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}", "-C", "-Q", "SELECT 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,26 +28,36 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   app:
     build: .
     container_name: restapi-app
     ports:
-      - "8080:8080"
+      - "8000:8000"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=RestAPI;encrypt=true;trustServerCertificate=true;
-      - SPRING_DATASOURCE_USERNAME=sa
-      - SPRING_DATASOURCE_PASSWORD=sa
-      - SPRING_REDIS_HOST=redis
-      - SPRING_REDIS_PORT=6379
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=${DB_NAME:-RestAPI};encrypt=true;trustServerCertificate=true;
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
       - SPRING_BOOT_ADMIN_CLIENT_URL=http://admin:8080
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
     depends_on:
       sqlserver:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
       admin:
         condition: service_started
+    restart: unless-stopped
 
   admin:
     image: bessbd/spring-boot-admin:3.2.0
@@ -52,8 +65,9 @@ services:
     ports:
       - "8081:8080"
     environment:
-      - SPRING_SECURITY_USER_NAME=admin
-      - SPRING_SECURITY_USER_PASSWORD=admin
+      - SPRING_SECURITY_USER_NAME=${SBA_USERNAME:-admin}
+      - SPRING_SECURITY_USER_PASSWORD=${SBA_PASSWORD:-admin}
+    restart: unless-stopped
 
 volumes:
   sqlserver_data:
