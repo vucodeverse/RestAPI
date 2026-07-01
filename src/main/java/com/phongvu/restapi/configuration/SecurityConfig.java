@@ -41,6 +41,11 @@ public class SecurityConfig {
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"};
+    private static final String[] ACTUATOR_ENDPOINTS = {
+            "/actuator/health",
+            "/actuator/info",
+            "/actuator/prometheus"
+    };
 
     // Get the secret key from application.properties
     @Value("${jwt.secret}")
@@ -70,6 +75,7 @@ public class SecurityConfig {
                         authorize -> authorize.requestMatchers(
                                 HttpMethod.POST, PUBLIC_ENDPOINTS).permitAll()
                                 .requestMatchers(SWAGGER_ENDPOINTS).permitAll()
+                                .requestMatchers(ACTUATOR_ENDPOINTS).permitAll()
                                 .anyRequest()
                                 .authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
